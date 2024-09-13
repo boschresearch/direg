@@ -34,7 +34,7 @@ def extract_feats(pcd, feature_type, voxel_size, model=None):
             o3d.geometry.KDTreeSearchParamHybrid(radius=radius_normal,
                                                  max_nn=30))
         radius_feat = voxel_size * 5
-        feat = o3d.pipelines.registration.compute_fpfh_feature(
+        feat = o3d.registration.compute_fpfh_feature(
             pcd,
             o3d.geometry.KDTreeSearchParamHybrid(radius=radius_feat,
                                                  max_nn=100))
@@ -169,3 +169,115 @@ def refine(src, dst, ransac_T, distance_thr):
         float(len(dst.points)) / float(len(src.points)))
 
     return icp_T, fitness
+
+
+def w_procrustes_dgr(X, Y, w=None, eps=np.finfo(np.float32).eps):
+  """
+  DGR weighted Procrustes Implementation
+  
+  X: torch tensor N x 3
+  Y: torch tensor N x 3
+  w: torch tensor N
+
+  The following function is from DGR (1f4871d)
+      (https://github.com/chrischoy/DeepGlobalRegistration/tree/1f4871d4c616fa2d2dc6d04a4506bd7d6e593fb4)
+  Copyright (c) 2020 Chris Choy (chrischoy@ai.stanford.edu), Wei Dong (weidong@andrew.cmu.edu),
+  licensed under the MIT license, cf. 3rd-party-licenses.txt file in the root directory of this source tree.
+  """
+  # https://ieeexplore.ieee.org/document/88573
+  assert len(X) == len(Y)
+  if w is not None:
+    W1 = torch.abs(w).sum()
+    w_norm = w / (W1 + eps)
+    w_norm = w_norm[:, None]
+  else:
+    w_norm = torch.full((len(X), 1), 1 / (len(X) + eps)).to(X.device)
+
+  mux = (w_norm * X).sum(0, keepdim=True)
+  muy = (w_norm * Y).sum(0, keepdim=True)
+
+  # Use CPU for small arrays
+  Sxy = (Y - muy).t().mm(w_norm * (X - mux)).cpu().double()
+  U, D, V = Sxy.svd()
+  S = torch.eye(3).double()
+  if U.det() * V.det() < 0:
+    S[-1, -1] = -1
+
+  R = U.mm(S.mm(V.t())).float()
+  t = (muy.cpu().squeeze() - R.mm(mux.cpu().t()).squeeze()).float()
+  
+  T = torch.empty((4, 4), dtype=torch.float32)
+  T[:3, :3] = R
+  T[:3, 3] = t
+  T[3, :] = torch.tensor([0, 0, 0, 1])
+  return T
+
+
+
+def sparsify_data(input_dict, F0=None, F1=None, percentage=1):
+    """
+    Sparsifies `input_dict` and optionally `F0` and `F1` by randomly
+    selecting a `percentage` of points from each batch. Only
+    'correspondences' entry is not implemented yet and therefore
+    missing from the output.
+    """
+
+    # Get the batch sizes
+    batch_sizes = input_dict['len_batch']
+
+    # Calculate the number of elements to keep for each batch
+    max_num_per_batch0 = (percentage * torch.tensor(input_dict['len_batch'])[:,0]).int()
+    max_num_per_batch1 = (percentage * torch.tensor(input_dict['len_batch'])[:,1]).int()
+
+    # Initialize the sparsified input_dict
+    sinput_dict = {}
+
+    # Initialize the start indices for each batch
+    start_idx0 = 0
+    start_idx1 = 0
+
+    # Initialize the new batch sizes
+    new_batch_sizes = []
+
+    # Initialize sparsified F0 and F1
+    sF0 = []
+    sF1 = []
+
+    for i in range(len(batch_sizes)):
+        N0 = batch_sizes[i][0]
+        N1 = batch_sizes[i][1]
+
+        # Generate random subsets of indices for each batch
+        indices0 = torch.randperm(N0)[:max_num_per_batch0[i]] + start_idx0
+        indices1 = torch.randperm(N1)[:max_num_per_batch1[i]] + start_idx1
+
+        # Sparsify the input_dict for each batch
+        pc0_keys=['sinput0_F', 'sinput0_C', 'pcd0']
+        pc1_keys=['sinput1_F', 'sinput1_C', 'pcd1']
+        for key in pc0_keys:
+            sinput_dict[key] = input_dict[key][indices0] if i == 0 else torch.cat((sinput_dict[key], input_dict[key][indices0]), 0)
+        for key in pc1_keys:
+            sinput_dict[key] = input_dict[key][indices1] if i == 0 else torch.cat((sinput_dict[key], input_dict[key][indices1]), 0)
+
+        # Sparsify F0 and F1 for each batch
+        if F0 is not None:
+            sF0.append(F0[indices0])
+        if F1 is not None:
+            sF1.append(F1[indices1])
+
+        # Update the new batch sizes
+        new_batch_sizes.append([len(indices0), len(indices1)])
+
+        # Update the start indices for the next batch
+        start_idx0 += N0
+        start_idx1 += N1
+
+    # Update the 'len_batch' entry in sinput_dict
+    sinput_dict['len_batch'] = new_batch_sizes
+    sinput_dict["T_gt"] = input_dict["T_gt"] # Copy over
+
+    # Concat sF0 and sF1 if they are not None
+    sF0 = torch.cat(sF0) if F0 is not None else None
+    sF1 = torch.cat(sF1) if F1 is not None else None
+
+    return sinput_dict, sF0, sF1

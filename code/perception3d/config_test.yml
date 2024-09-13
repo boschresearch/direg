@@ -1,3 +1,15 @@
-dataset_path: '/home/wei/Workspace/data/threedmatch_test'
-weights: '/home/wei/Downloads/fcgf-pretrained.pth'
+# Copyright (c) 2024 Robert Bosch GmbH
+# SPDX-License-Identifier: AGPL-3.0
+
+# This source code is derived from SGP (63d33cc)
+#   (https://github.com/theNded/SGP/tree/63d33cc8bffde53676d9c4800f4b11804b53b360)
+# Copyright (c) 2021 Wei Dong and Heng Yang, licensed under the MIT license,
+# cf. 3rd-party-licenses.txt file in the root directory of this source tree.
+
+
+dataset_path: 'data/threedmatch_test_reorg'
+
 scenes: [7-scenes-redkitchen, sun3d-home_at-home_at_scan1_2013_jan_1, sun3d-home_md-home_md_scan9_2012_sep_30, sun3d-hotel_uc-scan3, sun3d-hotel_umd-maryland_hotel1, sun3d-hotel_umd-maryland_hotel3, sun3d-mit_76_studyroom-76-1studyroom2, sun3d-mit_lab_hj-lab_hj_tea_nov_2_2012_scan1_erika]
+
+weights: 'output/weights.pth'
+output:  'results/model.npz'

@@ -1,3 +1,13 @@
+# Copyright (c) 2024 Robert Bosch GmbH
+# SPDX-License-Identifier: AGPL-3.0
+
+# This source code is derived from FCGF (0612340)
+#   (https://github.com/chrischoy/FCGF/tree/0612340ead256adb5449da8088f506e947e44b4c)
+# Copyright (c) 2019 Chris Choy (chrischoy@ai.stanford.edu), Jaesik Park (jaesik.park@postech.ac.kr),
+# licensed under the MIT license, cf. 3rd-party-licenses.txt file in the root directory of this
+# source tree.
+
+
 import torch
 import numpy as np
 import MinkowskiEngine as ME
@@ -16,6 +26,38 @@ def _hash(arr, M):
     else:
       hash_vec += arr[d] * M**d
   return hash_vec
+
+
+def cosine_scheduler(base_value, final_value, epochs, niter_per_ep, warmup_epochs=0, start_warmup_value=0):
+  """
+  The following function is from DINO, licensed under the Apache-2.0 license, cf. 3rd-party-licenses.txt
+  file in the root directory of this source tree.
+    (https://github.com/facebookresearch/dino/blob/7c446df5b9f45747937fb0d72314eb9f7b66930a/utils.py#L187)
+  """
+  warmup_schedule = np.array([])
+  warmup_iters = warmup_epochs * niter_per_ep
+  if warmup_epochs > 0:
+      warmup_schedule = np.linspace(start_warmup_value, base_value, warmup_iters)
+
+  iters = np.arange(epochs * niter_per_ep - warmup_iters)
+  schedule = final_value + 0.5 * (base_value - final_value) * (1 + np.cos(np.pi * iters / len(iters)))
+
+  schedule = np.concatenate((warmup_schedule, schedule))
+  assert len(schedule) == epochs * niter_per_ep
+  return schedule
+
+
+def decompose_tensors(tens1, tens2, len_batch):
+    decomposed_tens1 = []
+    decomposed_tens2 = []
+    start_ind1 = 0
+    start_ind2 = 0
+    for len1, len2 in len_batch:
+        decomposed_tens1.append(tens1[start_ind1 : start_ind1 + len1])
+        start_ind1 += len1
+        decomposed_tens2.append(tens2[start_ind2 : start_ind2 + len2])
+        start_ind2 += len2
+    return decomposed_tens1, decomposed_tens2
 
 
 def extract_features(model,

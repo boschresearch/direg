@@ -1,3 +1,13 @@
+# Copyright (c) 2024 Robert Bosch GmbH
+# SPDX-License-Identifier: AGPL-3.0
+
+# This source code is derived from FCGF (0612340)
+#   (https://github.com/chrischoy/FCGF/tree/0612340ead256adb5449da8088f506e947e44b4c)
+# Copyright (c) 2019 Chris Choy (chrischoy@ai.stanford.edu), Jaesik Park (jaesik.park@postech.ac.kr),
+# licensed under the MIT license, cf. 3rd-party-licenses.txt file in the root directory of this
+# source tree.
+
+
 # -*- coding: future_fstrings -*-
 #
 # Written by Chris Choy <chrischoy@ai.stanford.edu>
@@ -24,7 +34,7 @@ kitti_icp_cache = {}
 
 
 def collate_pair_fn(list_data):
-  xyz0, xyz1, coords0, coords1, feats0, feats1, matching_inds, trans = list(
+  xyz0, xyz1, coords0, coords1, feats0, feats1, matching_inds, trans, T0, T1, xyz0_raw, xyz1_raw = list(
       zip(*list_data))
   xyz_batch0, xyz_batch1 = [], []
   matching_inds_batch, trans_batch, len_batch = [], [], []
@@ -50,7 +60,10 @@ def collate_pair_fn(list_data):
     trans_batch.append(to_tensor(trans[batch_id]))
 
     matching_inds_batch.append(
-        torch.from_numpy(np.array(matching_inds[batch_id]) + curr_start_inds))
+      torch.from_numpy(np.array(matching_inds[batch_id]) + curr_start_inds) \
+        if len(matching_inds[batch_id]) > 0 \
+          else torch.zeros((0, 2), dtype=torch.int64)
+    )
     len_batch.append([N0, N1])
 
     # Move the head
@@ -75,7 +88,11 @@ def collate_pair_fn(list_data):
       'sinput1_F': feats_batch1.float(),
       'correspondences': matching_inds_batch,
       'T_gt': trans_batch,
-      'len_batch': len_batch
+      'len_batch': len_batch,
+      "T0": T0,
+      "T1": T1,
+      "xyz0_raw": xyz0_raw,
+      "xyz1_raw": xyz1_raw
   }
 
 
@@ -123,7 +140,8 @@ class PairDataset(torch.utils.data.Dataset):
     logging.info(f"Resetting the data loader seed to {seed}")
     self.randg.seed(seed)
 
-  def apply_transform(self, pts, trans):
+  @staticmethod
+  def apply_transform(pts, trans):
     R = trans[:3, :3]
     T = trans[:3, 3]
     pts = pts @ R.T + T

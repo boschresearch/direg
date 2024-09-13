@@ -1,7 +1,14 @@
 # -*- coding: future_fstrings -*-
 #
-# Written by Chris Choy <chrischoy@ai.stanford.edu>
-# Distributed under MIT License
+# Copyright (c) 2024 Robert Bosch GmbH
+# SPDX-License-Identifier: AGPL-3.0
+
+# This source code is derived from EYOC (910287d)
+#   (https://github.com/liuQuan98/EYOC/tree/910287de18af52ee5a2bde7fa9fefcf51f6ada85)
+# Copyright (c) 2019 Chris Choy (chrischoy@ai.stanford.edu), Jaesik Park (jaesik.park@postech.ac.kr),
+# licensed under the MIT license, cf. 3rd-party-licenses.txt file in the root directory of this
+# source tree.
+
 import logging
 import random
 import torch
@@ -20,7 +27,7 @@ from lib.timer import Timer
 import MinkowskiEngine as ME
 import open3d as o3d
 
-import dask.dataframe as dd
+#import dask.dataframe as dd
 from pytorch3d.ops.knn import knn_points
 import pytorch3d
 
@@ -29,7 +36,7 @@ kitti_icp_cache = {}
 
 
 def collate_pair_fn(list_data):
-    xyz0, xyz1, coords0, coords1, feats0, feats1, matching_inds, trans, frame_distances = list(
+    xyz0, xyz1, coords0, coords1, feats0, feats1, matching_inds, trans, _, _, _, _ = list(
         zip(*list_data))
     # xyz_batch0, xyz_batch1 = [], []
     matching_inds_batch, trans_batch, len_batch = [], [], []
@@ -44,6 +51,9 @@ def collate_pair_fn(list_data):
             return torch.from_numpy(x)
         else:
             raise ValueError(f'Can not convert to torch tensor, {x}')
+
+    # convert from numpy arrays to pytorch tensors    
+    xyz0, xyz1 = [[to_tensor(elem).float() for elem in ls] for ls in [xyz0, xyz1]]
 
     for batch_id, _ in enumerate(coords0):
         N0 = coords0[batch_id].shape[0]
@@ -81,7 +91,7 @@ def collate_pair_fn(list_data):
         'correspondences': matching_inds_batch,
         'T_gt': trans_batch,
         'len_batch': len_batch,
-        'frame_distance': frame_distances
+        #'frame_distance': frame_distances
     }
 
 

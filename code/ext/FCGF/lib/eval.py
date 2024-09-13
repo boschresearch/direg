@@ -1,3 +1,12 @@
+# Copyright (c) 2024 Robert Bosch GmbH
+# SPDX-License-Identifier: AGPL-3.0
+
+# This source code is derived from FCGF (0612340)
+#   (https://github.com/chrischoy/FCGF/tree/0612340ead256adb5449da8088f506e947e44b4c)
+# Copyright (c) 2019 Chris Choy (chrischoy@ai.stanford.edu), Jaesik Park (jaesik.park@postech.ac.kr),
+# licensed under the MIT license, cf. 3rd-party-licenses.txt file in the root directory of this
+# source tree.
+
 import torch
 import numpy as np
 import open3d as o3d
@@ -8,7 +17,7 @@ from scipy.spatial import cKDTree
 
 def find_nn_cpu(feat0, feat1, return_distance=False):
   feat1tree = cKDTree(feat1)
-  dists, nn_inds = feat1tree.query(feat0, k=1, n_jobs=-1)
+  dists, nn_inds = feat1tree.query(feat0, k=1, workers=-1)
   if return_distance:
     return nn_inds, dists
   else:

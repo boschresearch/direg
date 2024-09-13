@@ -1,3 +1,12 @@
+# Copyright (c) 2024 Robert Bosch GmbH
+# SPDX-License-Identifier: AGPL-3.0
+
+# This source code is derived from FCGF (0612340)
+#   (https://github.com/chrischoy/FCGF/tree/0612340ead256adb5449da8088f506e947e44b4c)
+# Copyright (c) 2019 Chris Choy (chrischoy@ai.stanford.edu), Jaesik Park (jaesik.park@postech.ac.kr),
+# licensed under the MIT license, cf. 3rd-party-licenses.txt file in the root directory of this
+# source tree.
+
 # -*- coding: future_fstrings -*-
 import open3d as o3d  # prevent loading error
 
@@ -11,7 +20,7 @@ from lib.data_loaders import make_data_loader
 from config import get_config
 
 from lib.trainer import ContrastiveLossTrainer, HardestContrastiveLossTrainer, \
-    TripletLossTrainer, HardestTripletLossTrainer
+    TripletLossTrainer, HardestTripletLossTrainer, NonContrastiveLossTrainer
 
 ch = logging.StreamHandler(sys.stdout)
 logging.getLogger().setLevel(logging.INFO)
@@ -29,6 +38,8 @@ def get_trainer(trainer):
     return ContrastiveLossTrainer
   elif trainer == 'HardestContrastiveLossTrainer':
     return HardestContrastiveLossTrainer
+  elif trainer == 'NonContrastiveLossTrainer':
+    return NonContrastiveLossTrainer
   elif trainer == 'TripletLossTrainer':
     return TripletLossTrainer
   elif trainer == 'HardestTripletLossTrainer':

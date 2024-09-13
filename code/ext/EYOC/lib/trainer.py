@@ -1,7 +1,14 @@
 # -*- coding: future_fstrings -*-
 #
-# Written by Chris Choy <chrischoy@ai.stanford.edu>
-# Distributed under MIT License
+# Copyright (c) 2024 Robert Bosch GmbH
+# SPDX-License-Identifier: AGPL-3.0
+
+# This source code is derived from EYOC (910287d)
+#   (https://github.com/liuQuan98/EYOC/tree/910287de18af52ee5a2bde7fa9fefcf51f6ada85)
+# Copyright (c) 2019 Chris Choy (chrischoy@ai.stanford.edu), Jaesik Park (jaesik.park@postech.ac.kr),
+# licensed under the MIT license, cf. 3rd-party-licenses.txt file in the root directory of this
+# source tree.
+
 import os
 import os.path as osp
 import gc
@@ -31,6 +38,10 @@ from scripts.SC2_PCR.SC2_PCR import Matcher
 
 import MinkowskiEngine as ME
 
+
+import shutil
+
+file_dir = os.path.dirname(os.path.abspath(__file__))
 
 class AlignmentTrainer:
     def __init__(
@@ -162,6 +173,18 @@ class AlignmentTrainer:
                     logging.info(
                         f'Current best val model with {self.best_val_metric}: {self.best_val} at epoch {self.best_val_epoch}'
                     )
+
+                if epoch % self.config.save_add_checkpoint_interval == 0:
+                    self._save_checkpoint(epoch, f'checkpoint_after_{epoch}epochs')
+                if epoch % 50 == 0:
+                    model_path = os.path.join(self.checkpoint_dir, 'best_val_checkpoint.pth')
+                    if os.path.exists(model_path):
+                        shutil.copyfile(model_path,
+                            os.path.join(self.checkpoint_dir, f'best_val_checkpoint_after_{epoch}epochs.pth')
+                        )
+                    else:
+                        self._save_checkpoint(epoch, f'checkpoint_after_{epoch}epochs')
+
 
     def _save_checkpoint(self, epoch, filename='checkpoint'):
         state = {
@@ -845,20 +868,18 @@ class CorrespondenceExtensionTrainer(ContrastiveLossTrainer):
         self.use_sc2pcr = config.use_SC2_PCR
 
         if self.use_sc2pcr:
-            config_sc2pcr = json.load(open('scripts/SC2_PCR/config_json/config_KITTI.json', 'r'))
+            config_sc2pcr = json.load(open(os.path.join(file_dir,'../scripts/SC2_PCR/config_json/config_3DMatch.json'), 'r'))
             config_sc2pcr = edict(config_sc2pcr)
-            for key, item in config_sc2pcr.items():
-                config[key] = item
-            self.matcher = Matcher(inlier_threshold=config.inlier_threshold,
-                                   num_node=config.num_node,
-                                   use_mutual=config.use_mutual,
-                                   d_thre=config.d_thre,
-                                   num_iterations=config.num_iterations,
-                                   ratio=config.ratio,
-                                   nms_radius=config.nms_radius,
-                                   max_points=config.max_points,
-                                   k1=config.k1,
-                                   k2=config.k2)
+            self.matcher = Matcher(inlier_threshold=config_sc2pcr.inlier_threshold,
+                                   num_node=config_sc2pcr.num_node,
+                                   use_mutual=config_sc2pcr.use_mutual,
+                                   d_thre=config_sc2pcr.d_thre,
+                                   num_iterations=config_sc2pcr.num_iterations,
+                                   ratio=config_sc2pcr.ratio,
+                                   nms_radius=config_sc2pcr.nms_radius,
+                                   max_points=config_sc2pcr.max_points,
+                                   k1=config_sc2pcr.k1,
+                                   k2=config_sc2pcr.k2)
 
         self.neg_thresh = config.neg_thresh
         self.pos_thresh = config.pos_thresh
@@ -1204,7 +1225,7 @@ class CorrespondenceExtensionTrainer(ContrastiveLossTrainer):
             correspondences = []
             uncollated_corr = []
             for i, (p1_length, p2_length) in enumerate(zip(P1_N, P2_N)):
-                if not success_est[i] == 0:
+                if True: #not success_est[i] == 0: bug in original EYOC implementation. success_est gets never filled
                     pos_sel_1 = torch.randperm(p1_length)[:min(p1_length, 5000)].to(self.device)
 
                     pose = torch.Tensor(T_ransac[i]).to(self.device)
@@ -1483,14 +1504,14 @@ class ContinuousCorrExtensionTrainer(CorrespondenceExtensionTrainer):
 
         # If the epoch reaches a bunch of predefined thresholds,
         # the dataset is extended to contain longer-distance pairs.
-        curr_distance = self.data_loader.dataset.update_extension_distance(epoch)
+        # curr_distance = self.data_loader.dataset.update_extension_distance(epoch)
 
         # save the intermediate models when we are at some important intermediate positions, for plotting only
         # if curr_distance and curr_distance in [2,6,11,16,21,26]:
         #     self._save_checkpoint(epoch-1, filename=f"{curr_distance-1}_checkpoint")
 
         self.epoch = epoch
-        base_mode_flag = self.data_loader.dataset.is_base_dataset()
+        base_mode_flag = False #self.data_loader.dataset.is_base_dataset()
 
         if not base_mode_flag or self.config.skip_initialization:
             if not self.labeler:
@@ -1589,21 +1610,23 @@ class ContinuousCorrExtensionTrainer(CorrespondenceExtensionTrainer):
                                                                                     radius=self.config.filter_radius, 
                                                                                     feature_filter=self.config.feature_filter,
                                                                                     spatial_filter=self.config.spatial_filter,
-                                                                                    frame_distance=input_dict['frame_distance'])
+                                                                                    #frame_distance=input_dict['frame_distance']
+                                                                                    )
                         
                         # The correspondences above are still noisy and not suitable for direct training of the student.
                         # Instead, we apply SC2-PCR to select the inliers and perform a registration.
                         # The estimated pose is highly likely correct and can be used to re-calculate nearest-neighbor correspondences.
                         if self.config.use_sc2_filtering:
-                            try:
+                            #try:
+                            if True:
                                 T_ransac, pos_pairs, _, fitnesses, uncollated_pairs = self.corr_through_registration(input_dict, uncollated_pairs)
                                 if self.record_sim_dataset:
                                     trans_gt_log  += [item.cpu().tolist() for item in input_dict['T_gt']]
                                     trans_est_log += [item.tolist() for item in T_ransac]
                                     fitnesses_log += fitnesses                            
-                            except Exception as e:
-                                print(e)    # sometimes SC2-PCR will fail in various ways due to empty correspondence. We just catch and ignore them.
-                                continue
+                            #except Exception as e:
+                            #    print(e)    # sometimes SC2-PCR will fail in various ways due to empty correspondence. We just catch and ignore them.
+                            #    continue
                             pos_pairs = pos_pairs.cpu()
                         else:
                             pos_pairs = pos_pair_tmp
@@ -1726,7 +1749,7 @@ class ContinuousCorrExtensionTrainer(CorrespondenceExtensionTrainer):
                 else:
                     success_meter.update(0)
             print(f"{rte_thresh=}, {rre_thresh=}")
-            print(f"Labeler trained with max_pair_dist={self.labeler_max_dist} labels data {self.data_loader.dataset.MAX_DIST}m apart at {100*success_meter.avg:.2f}% RR.")
+            # print(f"Labeler trained with max_pair_dist={self.labeler_max_dist} labels data {self.data_loader.dataset.MAX_DIST}m apart at {100*success_meter.avg:.2f}% RR.")
             raise ValueError
         
         if self.record_sim_dataset and epoch % 30 == 1:

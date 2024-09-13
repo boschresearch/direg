@@ -6,18 +6,15 @@
 # Copyright (c) 2021 Wei Dong and Heng Yang, licensed under the MIT license,
 # cf. 3rd-party-licenses.txt file in the root directory of this source tree.
 
-
 dataset_path: 'data/threedmatch_reorg'
 
 scenes: [7-scenes-chess@seq-01, 7-scenes-chess@seq-02, 7-scenes-chess@seq-03, 7-scenes-chess@seq-04, 7-scenes-chess@seq-05, 7-scenes-chess@seq-06, 7-scenes-fire@seq-01, 7-scenes-fire@seq-02, 7-scenes-fire@seq-03, 7-scenes-fire@seq-04, 7-scenes-heads@seq-01, 7-scenes-heads@seq-02, 7-scenes-office@seq-01, 7-scenes-office@seq-02, 7-scenes-office@seq-03, 7-scenes-office@seq-04, 7-scenes-office@seq-05, 7-scenes-office@seq-06, 7-scenes-office@seq-07, 7-scenes-office@seq-08, 7-scenes-office@seq-09, 7-scenes-office@seq-10, 7-scenes-pumpkin@seq-01, 7-scenes-pumpkin@seq-02, 7-scenes-pumpkin@seq-03, 7-scenes-pumpkin@seq-06, 7-scenes-pumpkin@seq-07, 7-scenes-pumpkin@seq-08, 7-scenes-stairs@seq-01, 7-scenes-stairs@seq-02, 7-scenes-stairs@seq-03, 7-scenes-stairs@seq-04, 7-scenes-stairs@seq-05, 7-scenes-stairs@seq-06, analysis-by-synthesis-apt1-kitchen@seq-01, analysis-by-synthesis-apt1-living@seq-01, analysis-by-synthesis-apt2-bed@seq-01, analysis-by-synthesis-apt2-living@seq-01, analysis-by-synthesis-apt2-luke@seq-01, analysis-by-synthesis-office2-5a@seq-01, analysis-by-synthesis-office2-5b@seq-01, bundlefusion-apt0@seq-01, bundlefusion-apt1@seq-01, bundlefusion-apt2@seq-01, bundlefusion-copyroom@seq-01, bundlefusion-office1@seq-01, bundlefusion-office2@seq-01, bundlefusion-office3@seq-01, rgbd-scenes-v2-scene_01@seq-01, rgbd-scenes-v2-scene_02@seq-01, rgbd-scenes-v2-scene_03@seq-01, rgbd-scenes-v2-scene_04@seq-01, rgbd-scenes-v2-scene_05@seq-01, rgbd-scenes-v2-scene_06@seq-01, rgbd-scenes-v2-scene_07@seq-01, rgbd-scenes-v2-scene_08@seq-01, rgbd-scenes-v2-scene_09@seq-01, rgbd-scenes-v2-scene_11@seq-01, rgbd-scenes-v2-scene_12@seq-01, rgbd-scenes-v2-scene_13@seq-01, rgbd-scenes-v2-scene_14@seq-01, sun3d-brown_bm_1-brown_bm_1@seq-01, sun3d-brown_cogsci_1-brown_cogsci_1@seq-01, sun3d-brown_cs_2-brown_cs2@seq-01, sun3d-brown_cs_3-brown_cs3@seq-01, sun3d-harvard_c3-hv_c3_1@seq-01, sun3d-harvard_c5-hv_c5_1@seq-01, sun3d-harvard_c6-hv_c6_1@seq-01, sun3d-harvard_c8-hv_c8_3@seq-01, sun3d-home_bksh-home_bksh_oct_30_2012_scan2_erika@seq-01, sun3d-hotel_nips2012-nips_4@seq-01, sun3d-hotel_sf-scan1@seq-01, sun3d-mit_32_d507-d507_2@seq-01, sun3d-mit_46_ted_lab1-ted_lab_2@seq-01, sun3d-mit_76_417-76-417b@seq-01, sun3d-mit_dorm_next_sj-dorm_next_sj_oct_30_2012_scan1_erika@seq-01, sun3d-mit_w20_athena-sc_athena_oct_29_2012_scan1_erika@seq-01]
 val_scenes: [sun3d-brown_bm_4-brown_bm_4@seq-01, sun3d-harvard_c11-hv_c11_2@seq-01, 7-scenes-heads@seq-01, 7-scenes-heads@seq-02, rgbd-scenes-v2-scene_10@seq-01, bundlefusion-office0@seq-01, analysis-by-synthesis-apt2-kitchen@seq-01]
 
-finetune: True # finetune network for new pseudo labels instead training from scratch
-
+self_training: True
 refinement: ICP
+ema_teacher: True
+momentum_teacher: 0.9
 
-overlap_thr: [0.3, 0.3, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1] # threshold for verifier
-max_epoch_per_iter: [25, 25, 25, 25, 25, 25, 25, 25]  # epochs until new pseudo labels
-
-out_dir:          outputs/sgp
-pseudo_label_dir: outputs/sgp/ps_labels
+out_dir: outputs/direg
+max_epoch: 200

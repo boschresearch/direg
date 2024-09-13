@@ -1,3 +1,11 @@
+# Copyright (c) 2024 Robert Bosch GmbH
+# SPDX-License-Identifier: AGPL-3.0
+
+# This source code is derived from SGP (63d33cc)
+#   (https://github.com/theNded/SGP/tree/63d33cc8bffde53676d9c4800f4b11804b53b360)
+# Copyright (c) 2021 Wei Dong and Heng Yang, licensed under the MIT license,
+# cf. 3rd-party-licenses.txt file in the root directory of this source tree.
+
 import os
 import numpy as np
 
@@ -12,8 +20,8 @@ class DatasetBase:
 
         for i, scene in enumerate(self.scenes):
             num_pairs = len(scene['pairs'])
-            scene_ids.append(np.ones((num_pairs), dtype=np.int) * i)
-            pair_ids.append(np.arange(0, num_pairs, dtype=np.int))
+            scene_ids.append(np.ones((num_pairs), dtype=int) * i)
+            pair_ids.append(np.arange(0, num_pairs, dtype=int))
 
         self.scene_idx_map = np.concatenate(scene_ids)
         self.pair_idx_map = np.concatenate(pair_ids)

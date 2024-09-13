@@ -1,3 +1,13 @@
+# Copyright (c) 2024 Robert Bosch GmbH
+# SPDX-License-Identifier: AGPL-3.0
+
+# This source code is derived from FCGF (0612340)
+#   (https://github.com/chrischoy/FCGF/tree/0612340ead256adb5449da8088f506e947e44b4c)
+# Copyright (c) 2019 Chris Choy (chrischoy@ai.stanford.edu), Jaesik Park (jaesik.park@postech.ac.kr),
+# licensed under the MIT license, cf. 3rd-party-licenses.txt file in the root directory of this
+# source tree.
+
+
 import math
 import time
 
@@ -51,7 +61,10 @@ class Timer(object):
     self.start_time = time.time()
 
   def toc(self, average=True):
-    self.diff = time.time() - self.start_time
+    return self.add(time.time() - self.start_time, average=average)
+
+  def add(self, diff, average=True):
+    self.diff = diff
     self.total_time += self.diff
     self.calls += 1
     if self.binary_fn:
